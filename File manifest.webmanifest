@@ -1,0 +1,15 @@
+{
+  "name": "Bagan Maker",
+  "short_name": "Bagan Maker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5B4BC4",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
