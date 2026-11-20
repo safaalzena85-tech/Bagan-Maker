@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bagan Maker</title>
+    <script>
+      // Tema tampilan (putih/abu/hitam) dipasang sebelum paint pertama
+      // agar tidak ada kedipan warna saat aplikasi dimuat.
+      (function () {
+        try {
+          var t = localStorage.getItem('bagan_maker_ui_theme');
+          if (t !== 'abu' && t !== 'hitam' && t !== 'putih') t = 'putih';
+          document.documentElement.setAttribute('data-nb-theme', t);
+        } catch (e) {
+          document.documentElement.setAttribute('data-nb-theme', 'putih');
+        }
+      })();
+    </script>
+    <meta name="description" content="Aplikasi pembuat bagan dan mind map horizontal dengan ekspor PNG transparan beresolusi tinggi." />
+    <meta property="og:title" content="Bagan Maker" />
+    <meta property="og:description" content="Aplikasi pembuat bagan dan mind map horizontal dengan ekspor PNG transparan beresolusi tinggi." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@600;700;800;900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

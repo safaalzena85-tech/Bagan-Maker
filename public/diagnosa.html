@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Diagnosa Ekspor — Bagan Maker</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:24px;background:#fafafa;color:#111}
+  h1{font-size:19px;margin:0 0 4px}
+  p{font-size:13px;color:#444;line-height:1.55;margin:6px 0}
+  button{font-size:13px;font-weight:600;padding:9px 16px;margin:0 8px 8px 0;cursor:pointer;border:1px solid #111;background:#fff;border-radius:8px}
+  button:hover{background:#f0f0f0}
+  pre{background:#fff;border:1px solid #ccc;border-radius:8px;padding:12px;font-size:11px;line-height:1.5;white-space:pre-wrap;max-height:65vh;overflow:auto}
+  .ok{color:#0a7a3f;font-weight:700}
+  .bad{color:#b42318;font-weight:700}
+</style>
+</head>
+<body>
+<h1>Diagnosa Ekspor PNG — Bagan Maker</h1>
+<p>Alat ini mengumpulkan bukti teknis dari browser Anda secara otomatis, lalu mengunduh hasilnya sebagai berkas teks. Tidak ada data yang dikirim ke mana pun.</p>
+<p><b>Cara pakai:</b> buka Bagan Maker dulu di tab lain (biarkan tetap terbuka), lalu kembali ke tab ini dan tekan tombol di bawah.</p>
+<button id="run">Jalankan Diagnosa</button>
+<button id="dl">Unduh Hasil (.txt)</button>
+<pre id="log">Belum dijalankan.</pre>
+<script>
+var out = [];
+function say(t){ out.push(t); document.getElementById('log').textContent = out.join('\n'); }
+
+function findCanvas(){
+  try { if (window.opener && window.opener.document) {
+    var e = window.opener.document.querySelector('#diagram-canvas-root');
+    if (e) return e;
+  } } catch (e) { say('CATATAN: tidak bisa mengakses tab Bagan Maker: ' + e.message); }
+  return null;
+}
+
+function bytesFromDataUrl(d){
+  var i = d.indexOf(',');
+  if (i < 0) return 0;
+  var b64 = d.slice(i + 1);
+  if (!b64) return 0;
+  return Math.floor(b64.length * 3 / 4);
+}
+
+async function withTimeout(p, ms, tag){
+  return Promise.race([p, new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('TIMEOUT ' + tag)); }, ms); })]);
+}
+
+async function rasterize(el, w, h, note){
+  var url = '';
+  try {
+    var clone = el.cloneNode(true);
+    clone.style.transform = 'none';
+    clone.style.width = w + 'px';
+    clone.style.height = h + 'px';
+    var xml = new XMLSerializer().serializeToString(clone);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+      '<foreignObject width="100%" height="100%">' + xml + '</foreignObject></svg>';
+    url = URL.createObjectURL(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}));
+    var img = new Image();
+    await withTimeout(new Promise(function(res,rej){
+      img.onload = function(){ res(); };
+      img.onerror = function(){ rej(new Error('gambar SVG gagal dimuat')); };
+      img.src = url;
+    }), 20000, 'load');
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    say('  ' + note + ' rasterisasi: gambar berhasil dimuat & digambar');
+    try {
+      var b = await withTimeout(new Promise(function(res,rej){
+        c.toBlob(function(x){ x && x.size > 0 ? res(x) : rej(new Error('toBlob menghasilkan kosong')); }, 'image/png');
+      }), 20000, 'toBlob');
+      say('  ' + note + ' toBlob=' + b.size + ' byte');
+      return b.size;
+    } catch (e) {
+      say('  ' + note + ' toBlob GAGAL: ' + e.message);
+      try {
+        var d = c.toDataURL('image/png');
+        var n = bytesFromDataUrl(d);
+        say('  ' + note + ' toDataURL=' + n + ' byte');
+        return n;
+      } catch (e2) {
+        say('  ' + note + ' toDataURL GAGAL: ' + e2.message);
+        return -1;
+      }
+    }
+  } catch (e) {
+    say('  ' + note + ' GAGAL: ' + e.message);
+    return -1;
+  } finally {
+    if (url) URL.revokeObjectURL(url);
+  }
+}
+
+document.getElementById('run').addEventListener('click', async function(){
+  out.length = 0;
+  say('=== DIAGNOSA EKSPOR BAGAN MAKER ===');
+  say('waktu       : ' + new Date().toString());
+  say('browser     : ' + navigator.userAgent);
+  say('platform    : ' + navigator.platform);
+  say('secure ctx  : ' + window.isSecureContext);
+  say('savePicker  : ' + typeof window.showSaveFilePicker);
+  say('deviceMemory: ' + (navigator.deviceMemory || 'tidak dilaporkan'));
+  say('hardwareConc: ' + (navigator.hardwareConcurrency || 'tidak dilaporkan'));
+  say('');
+
+  var el = findCanvas();
+  if (!el) {
+    say('KANVAS TIDAK DITEMUKAN.');
+    say('Buka tab Bagan Maker dulu, lalu tekan tombol ini dari situ');
+    say('(atau buka tab ini lewat tombol Diagnosa di Bagan Maker).');
+    return;
+  }
+
+  var w = el.offsetWidth, h = el.offsetHeight;
+  say('kanvas      : ' + w + ' x ' + h + ' px');
+  say('elemen tag  : ' + el.tagName);
+  say('');
+
+  // Apakah ada konten lintas-domain di dalam kanvas?
+  var cross = [];
+  el.querySelectorAll('*').forEach(function(n){
+    var tag = n.tagName.toLowerCase();
+    if (tag === 'img' && n.src && !/^(data|blob):/.test(n.src)) cross.push('img ' + n.src.slice(0,70));
+    if (tag === 'image') { var hh = n.getAttribute('href') || n.getAttribute('xlink:href') || ''; if (hh && hh[0] !== '#') cross.push('image ' + hh.slice(0,70)); }
+    var bg = getComputedStyle(n).backgroundImage;
+    if (bg && bg !== 'none' && bg.indexOf('url(') >= 0 && !/data:/.test(bg)) cross.push('bg ' + bg.slice(0,70));
+  });
+  var xmlAll = new XMLSerializer().serializeToString(el);
+  var httpsInXml = (xmlAll.match(/https?:\/\/(?!www\.w3\.org)[^"'\s)]+/g) || []);
+  say('konten luar di kanvas       : ' + (cross.length ? cross.length + ' item' : 'tidak ada'));
+  cross.slice(0,10).forEach(function(c){ say('   - ' + c); });
+  say('URL luar di XML kanvas      : ' + (httpsInXml.length ? httpsInXml.slice(0,5).join(', ') : 'tidak ada'));
+  say('stylesheet halaman          : ' + document.querySelectorAll('link[rel=stylesheet]').length + ' link');
+  var gf = 0;
+  try {
+    for (var i=0;i<document.styleSheets.length;i++){
+      var s = document.styleSheets[i];
+      if (s.href && s.href.indexOf('fonts.googleapis') >= 0) gf++;
+    }
+  } catch(e){}
+  say('stylesheet Google Fonts     : ' + gf);
+  say('');
+
+  // UJI A: elemen sederhana (kontrol) — memisahkan masalah browser vs aplikasi
+  say('--- UJI A: rasterisasi elemen uji sederhana (kontrol) ---');
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:400px;height:200px;background:#00C2CB;color:#000;font:700 30px Arial,sans-serif;display:flex;align-items:center;justify-content:center';
+  probe.textContent = 'KONTROL';
+  document.body.appendChild(probe);
+  await rasterize(probe, 400, 200, 'KONTROL');
+  probe.remove();
+  say('');
+
+  // UJI B: kanvas Bagan Maker apa adanya
+  say('--- UJI B: rasterisasi kanvas Bagan Maker ---');
+  await rasterize(el, w, h, 'KANVAS');
+  say('');
+
+  // UJI C: kanvas dengan font sistem dipaksa
+  say('--- UJI C: kanvas dengan font sistem (Arial) ---');
+  var clone = el.cloneNode(true);
+  clone.style.fontFamily = 'Arial, sans-serif';
+  clone.querySelectorAll('*').forEach(function(n){ n.style.fontFamily = 'Arial, sans-serif'; });
+  var holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-9999px;top:0;';
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
+  await rasterize(clone, w, h, 'FONT-SISTEM');
+  holder.remove();
+  say('');
+
+  // UJI D: skala 1x vs 2x pada kanvas (untuk membandingkan 1x gagal / 2x sukses)
+  say('--- UJI D: kanvas pada skala lebih besar (2x) ---');
+  await rasterize(el, w * 2, h * 2, 'KANVAS-2x');
+  say('');
+
+  say('=== SELESAI ===');
+  say('Tekan "Unduh Hasil (.txt)" lalu kirimkan berkasnya.');
+});
+
+document.getElementById('dl').addEventListener('click', function(){
+  var blob = new Blob([out.join('\r\n')], {type:'text/plain;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'diagnosa-bagan-maker.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+</script>
+</body>
+</html>

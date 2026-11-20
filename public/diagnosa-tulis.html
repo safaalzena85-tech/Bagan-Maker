@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnosa Tulis Berkas — Bagan Maker</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 20px; background: #fafafa; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { font-size: 13px; color: #444; line-height: 1.55; margin: 7px 0; }
+  button { font-size: 13px; font-weight: 600; padding: 10px 16px; margin: 0 8px 8px 0; cursor: pointer; border: 1px solid #111; background: #fff; border-radius: 8px; }
+  button:hover { background: #f0f0f0; }
+  button:disabled { opacity: .45; cursor: default; }
+  pre { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 12px; font-size: 11px; line-height: 1.55; white-space: pre-wrap; max-height: 62vh; overflow: auto; }
+  .step { background: #fff; border: 1px solid #ddd; border-left: 3px solid #0a7a3f; border-radius: 6px; padding: 10px 12px; margin: 10px 0; font-size: 13px; line-height: 1.5; }
+  .warn { border-left-color: #b7791f; }
+  code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .ok { color: #0a7a3f; font-weight: 700; }
+  .bad { color: #b42318; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Diagnosa Tulis Berkas — Bagan Maker</h1>
+<p>Halaman ini menguji <b>penulisan berkas sesungguhnya</b> lewat File System Access API, meniru persis yang dilakukan aplikasi saat menyimpan SVG/PNG ke lokasi pilihan — termasuk lagu-lagu <code>write()</code> dan <code>close()</code>.</p>
+
+<div class="step">
+  <b>Langkah 1:</b> Tekan tombol di bawah. Akan muncul dialog "Simpan Sebagai".
+  <br>Simpan ke folder apa saja — misalnya <code>D:\</code> dengan nama <code>UJI-TULIS.txt</code>.
+</div>
+<button id="run">Jalankan Uji Tulis</button>
+<button id="dl" disabled>Unduh Hasil (.txt)</button>
+<pre id="log">Belum dijalankan.</pre>
+
+<script>
+var out = [];
+var say = function (t) { out.push(t); document.getElementById('log').textContent = out.join('\n'); };
+
+async function ujiTulis() {
+  out.length = 0;
+  say('=== DIAGNOSA TULIS BERKAS ===');
+  say('waktu       : ' + new Date().toString());
+  say('browser     : ' + navigator.userAgent);
+  say('secure ctx  : ' + window.isSecureContext);
+  say('savePicker  : ' + typeof window.showSaveFilePicker);
+  say('');
+
+  // Isi uji: meniru SVG sungguhan (ukuran mirip)
+  var isiUji = '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">' +
+    '<text>UJI TULIS BAGAN MAKER</text>'.repeat(60) + '</svg>';
+  var isi = new Blob([isiUji], { type: 'text/plain;charset=utf-8' });
+  say('ukuran isi uji: ' + isi.size + ' byte (' + isiUji.length + ' karakter)');
+  say('');
+
+  if (typeof window.showSaveFilePicker !== 'function') {
+    say('GAGAL: showSaveFilePicker tidak tersedia.');
+    return;
+  }
+
+  var handle = null;
+  try {
+    say('1) membuka dialog "Simpan Sebagai"…');
+    handle = await window.showSaveFilePicker({
+      suggestedName: 'UJI-TULIS.txt',
+      types: [{ description: 'Berkas teks', accept: { 'text/plain': ['.txt'] } }],
+    });
+    say('   dialog selesai. berkas dipilih: ' + handle.name);
+  } catch (e) {
+    say('   dialog DIBATALKAN atau GAGAL: ' + e.name + ' — ' + e.message);
+    return;
+  }
+
+  // --- Cara A: seperti aplikasi (createWritable lalu write lalu close) ---
+  say('');
+  say('2) CARA A — createWritable() → write() → close()');
+  var t0 = performance.now();
+  try {
+    var w = await handle.createWritable();
+    say('   createWritable: ok (' + Math.round(performance.now() - t0) + ' ms)');
+
+    await w.write(isi);
+    say('   write(): selesai');
+
+    await w.close();
+    say('   close(): selesai');
+
+    var f = await handle.getFile();
+    say('   ukuran berkas di disk: ' + f.size + ' byte');
+    if (f.size > 0) {
+      say('   ' + 'HASIL CARA A: BERHASIL — berkas terisi.');
+    } else {
+      say('   ' + 'HASIL CARA A: GAGAL — berkas 0 byte walau close() sukses.');
+    }
+  } catch (e) {
+    say('   GAGAL: ' + e.name + ' — ' + e.message);
+    say('   ' + 'HASIL CARA A: GAGAL dengan error.');
+  }
+
+  // --- Cara B: keepExistingData + seek, terkadang lebih andal ---
+  say('');
+  say('3) CARA B — createWritable({keepExistingData:false}) → write → close');
+  try {
+    var w2 = await handle.createWritable({ keepExistingData: false });
+    await w2.write({ type: 'write', data: isi });
+    await w2.close();
+    var f2 = await handle.getFile();
+    say('   ukuran berkas di disk: ' + f2.size + ' byte');
+    say('   ' + (f2.size > 0 ? 'HASIL CARA B: BERHASIL — berkas terisi.' : 'HASIL CARA B: GAGAL — berkas 0 byte.'));
+  } catch (e) {
+    say('   GAGAL: ' + e.name + ' — ' + e.message);
+  }
+
+  // --- Cara C: tanpa await close (uji apakah close menggantung) ---
+  say('');
+  say('4) CARA C — createWritable → write → close, dengan batas waktu 5 dtk');
+  try {
+    var w3 = await handle.createWritable();
+    await w3.write(isi);
+    var closeP = w3.close();
+    var hasil = await Promise.race([
+      closeP.then(function () { return 'selesai'; }),
+      new Promise(function (r) { setTimeout(function () { r('MENGGANTUNG >5 dtk'); }, 5000); }),
+    ]);
+    say('   close(): ' + hasil);
+    var f3 = await handle.getFile();
+    say('   ukuran berkas di disk: ' + f3.size + ' byte');
+  } catch (e) {
+    say('   GAGAL: ' + e.name + ' — ' + e.message);
+  }
+
+  say('');
+  say('=== SELESAI ===');
+  say('Tekan "Unduh Hasil (.txt)" lalu kirimkan berkasnya.');
+  document.getElementById('dl').disabled = false;
+}
+
+document.getElementById('run').addEventListener('click', function () {
+  ujiTulis().catch(function (e) { say('ERROR TAK TERDUGA: ' + e.message); });
+});
+document.getElementById('dl').addEventListener('click', function () {
+  var blob = new Blob([out.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'diagnosa-tulis-berkas.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+</script>
+</body>
+</html>

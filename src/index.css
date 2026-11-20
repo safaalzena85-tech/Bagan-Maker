@@ -1,0 +1,774 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   DESIGN SYSTEM — Bagan Maker
+   -------------------------------------------------------------------------
+   Palet diambil dari identitas visual materi "Ketenagakerjaan":
+     ungu #7A5C99 · krem #F6E7CE · arang #383A3A · merah karang #F3725F
+   Latar aplikasi putih; krem dipakai sebagai aksen (kartu, panel, chip).
+   Catatan penting:
+   - Token & skin hanya dipakai pada scope `.nb-skin` (chrome/UI aplikasi).
+   - Area kanvas (diagram) TIDAK memakai `.nb-skin`, sehingga tampilan
+     diagram & hasil ekspor PNG/SVG tidak berubah sama sekali.
+   ========================================================================= */
+
+@theme {
+  /* --- Warna identitas (sumber kebenaran) --- */
+  --color-nb-purple: #7a5c99;
+  --color-nb-plum: #421b36;
+  --color-nb-cream: #f6e7ce;
+  --color-nb-charcoal: #383a3a;
+  --color-nb-night: #221f1f;
+  --color-nb-coral: #f3725f;
+  --color-nb-slate: #263238;
+
+  /* Nama lama dipertahankan sebagai alias agar komponen tidak berubah. */
+  --color-nb-teal: var(--color-nb-purple);
+  --color-nb-teal-dark: #6b4f88;
+  --color-nb-teal-darker: #5a4076;
+  --color-nb-magenta: var(--color-nb-coral);
+  --color-nb-yellow: var(--color-nb-cream);
+  --color-nb-black: #221f1f;
+  --color-nb-white: #ffffff;
+  --color-nb-beige: #ffffff;
+  --color-nb-beige-dark: #f7f5f0;
+
+  /* --- Tipografi --- */
+  --font-nb: 'Space Grotesk', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* --- Elevation (flat, tanpa blur) --- */
+  --shadow-nb-1: 2px 2px 0 0 #383a3a;
+  --shadow-nb-2: 6px 6px 0 0 #383a3a;
+  --shadow-nb-ctrl: 2px 2px 0 0 #383a3a;
+
+  /* --- Spacing scale: 4 8 12 16 24 32 48 64 96 --- */
+  --spacing-nb-1: 4px;
+  --spacing-nb-2: 8px;
+  --spacing-nb-3: 12px;
+  --spacing-nb-4: 16px;
+  --spacing-nb-6: 24px;
+  --spacing-nb-8: 32px;
+  --spacing-nb-12: 48px;
+  --spacing-nb-16: 64px;
+  --spacing-nb-24: 96px;
+}
+
+/* =========================================================================
+   TEMA TAMPILAN (chrome aplikasi) — 3 pilihan
+   Dipasang sebagai <html data-nb-theme="putih|abu|hitam">.
+   Hanya memengaruhi chrome (`.nb-skin`) + latar `.nb-app` & area kerja.
+   Kanvas/diagram TIDAK memakai token ini, jadi tampilan diagram dan hasil
+   ekspor PNG/SVG tetap sama pada tema apa pun.
+   ========================================================================= */
+:root,
+html[data-nb-theme='putih'] {
+  --nb-app-bg: #ffffff;      /* latar aplikasi: putih bersih */
+  --nb-raised: #ffffff;      /* panel, header, modal, input, kartu */
+  --nb-surface-2: #faf9f6;   /* seksi panel & tab bar (off-white hangat) */
+  --nb-surface-3: #f6e7ce;   /* krem sebagai aksen kontrol pasif */
+  --nb-workspace: #f7f5f0;   /* area kerja di belakang kanvas */
+  --nb-line: #221f1f;        /* garis & border: arang, bukan hitam murni */
+  --nb-line-soft: #d6d0c4;
+  --nb-ink: #221f1f;
+  --nb-ink-strong: #383a3a;
+  --nb-ink-soft: #5a5650;
+  --nb-ink-mute: #8a857c;
+  --nb-shadow: #383a3a;
+
+  /* Swatch pemilih tema */
+  --nb-swatch-putih: #ffffff;
+  --nb-swatch-abu: #e9e4da;
+  --nb-swatch-hitam: #221f1f;
+}
+
+/* Tema 2: ABU (netral hangat, krem lembut) */
+html[data-nb-theme='abu'] {
+  --nb-app-bg: #ede8df;
+  --nb-raised: #ffffff;
+  --nb-surface-2: #f6e7ce;
+  --nb-surface-3: #e6d9c1;
+  --nb-workspace: #e8e2d7;
+  --nb-line: #221f1f;
+  --nb-line-soft: #cfc6b6;
+  --nb-ink: #221f1f;
+  --nb-ink-strong: #383a3a;
+  --nb-ink-soft: #565149;
+  --nb-ink-mute: #7d766b;
+  --nb-shadow: #383a3a;
+}
+
+/* Tema 3: HITAM (gelap, arang hangat) */
+html[data-nb-theme='hitam'] {
+  --nb-app-bg: #221f1f;
+  --nb-raised: #383a3a;
+  --nb-surface-2: #2b2929;
+  --nb-surface-3: #4a4642;
+  --nb-workspace: #1a1818;
+  --nb-line: #f6e7ce;
+  --nb-line-soft: #6e6862;
+  --nb-ink: #f6e7ce;
+  --nb-ink-strong: #efe3cd;
+  --nb-ink-soft: #d6cbb8;
+  --nb-ink-mute: #afa694;
+  --nb-shadow: #000000;
+}
+
+/* Token warna yang dipakai DI LUAR `.nb-skin` (latar `.nb-app` & area kerja)
+   tetap mengikuti tema. Nilai ini menimpa `@theme` karena tidak berlayer. */
+:root {
+  --color-nb-beige: var(--nb-app-bg);
+  --color-nb-beige-dark: var(--nb-workspace);
+  --color-nb-white: var(--nb-raised);
+  --color-nb-black: var(--nb-ink);
+  --shadow-nb-1: 2px 2px 0 0 var(--nb-shadow);
+  --shadow-nb-2: 6px 6px 0 0 var(--nb-shadow);
+  --shadow-nb-ctrl: 2px 2px 0 0 var(--nb-shadow);
+}
+
+/* Variabel bantu (border/radius/type scale) */
+:root {
+  /* Teks di atas blok aksen GELAP (ungu, plum) memakai putih. */
+  --nb-on-accent: #ffffff;
+  /* Teks di atas blok aksen TERANG (krem, karang) memakai arang. */
+  --nb-on-light-accent: #221f1f;
+  --nb-border: 1px solid var(--nb-line);
+  --nb-border-strong: 1px solid var(--nb-line);
+  --nb-radius: 4px;
+  --nb-radius-sm: 6px;
+
+  /* Skala tipografi (responsif via clamp) */
+  --nb-fs-h1: clamp(2.25rem, 5vw, 6rem);    /* 96px di layar besar */
+  --nb-fs-h2: clamp(1.75rem, 3.6vw, 4rem);  /* 64px */
+  --nb-fs-h3: clamp(1.5rem, 2.6vw, 3rem);   /* 48px */
+  --nb-fs-h4: clamp(1.25rem, 1.8vw, 2rem);  /* 32px */
+  --nb-fs-body: 1rem;
+  --nb-fs-caption: 0.875rem;                /* 14px */
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    /* Kanvas/diagram memakai Rubik (via inline style), jadi body tetap Rubik. */
+    font-family: 'Rubik', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+  }
+}
+
+/* Latar halaman mengikuti tema */
+.nb-app {
+  background-color: var(--color-nb-beige);
+  color: var(--nb-ink);
+}
+
+/* Custom checkerboard background for transparency preview */
+.transparency-grid {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
+    linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
+    linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* =========================================================================
+   SCOPE SKIN — `.nb-skin`
+   Berisi remap token Tailwind + aturan komponen dasar neo-brutalist.
+   Aturan ini tidak berada di dalam @layer sehingga menang atas utility
+   Tailwind (unlayered > layered), tanpa perlu `!important`.
+   ========================================================================= */
+.nb-skin {
+  /* --- Remap token warna Tailwind ke palet neo-brutalist --- */
+
+  /* Netral — mengikuti TEMA TAMPILAN (lihat blok TEMA TAMPILAN di atas) */
+  --color-white: var(--nb-raised);
+  --color-black: var(--nb-ink);
+  --color-slate-50: var(--nb-surface-2);
+  --color-slate-100: var(--nb-surface-2);
+  --color-slate-200: var(--nb-surface-3);
+  --color-slate-300: var(--nb-line-soft);
+  --color-slate-400: var(--nb-ink-mute);
+  --color-slate-500: var(--nb-ink-soft);
+  --color-slate-600: var(--nb-ink-strong);
+  --color-slate-700: var(--nb-ink);
+  --color-slate-800: var(--nb-ink);
+  --color-slate-900: var(--nb-ink);
+  --color-slate-950: var(--nb-ink);
+
+  /* Primary (dulu indigo) -> Ungu #7A5C99 */
+  --color-indigo-50: #f5f1f8;
+  --color-indigo-100: #e9e1f1;
+  --color-indigo-200: #d3c3e3;
+  --color-indigo-300: #bca5d2;
+  --color-indigo-400: #9a7dba;
+  --color-indigo-500: #7a5c99;
+  --color-indigo-600: #7a5c99;
+  --color-indigo-700: #6b4f88;
+  --color-indigo-800: #5a4076;
+  --color-indigo-900: #483264;
+  --color-indigo-950: #36254c;
+
+  /* (dulu emerald) -> hijau sage lembut, tetap senada */
+  --color-emerald-50: #f1f6f2;
+  --color-emerald-100: #e2eee5;
+  --color-emerald-200: #c5ddcc;
+  --color-emerald-300: #a3c7af;
+  --color-emerald-400: #7fac90;
+  --color-emerald-500: #5e8c70;
+  --color-emerald-600: #4f7a60;
+  --color-emerald-700: #40634f;
+  --color-emerald-800: #324d3f;
+  --color-emerald-900: #263a30;
+  --color-emerald-950: #18261f;
+
+  /* (dulu purple) -> Plum #421B36 */
+  --color-purple-50: #f6eff3;
+  --color-purple-100: #ebdae6;
+  --color-purple-200: #d7b6cc;
+  --color-purple-300: #be8fac;
+  --color-purple-400: #9c6688;
+  --color-purple-500: #7d4c6c;
+  --color-purple-600: #6a3e5b;
+  --color-purple-700: #57314b;
+  --color-purple-800: #421b36;
+  --color-purple-900: #321426;
+  --color-purple-950: #220d1a;
+
+  /* (dulu amber) -> Krem #F6E7CE */
+  --color-amber-50: #fdfbf6;
+  --color-amber-100: #faf4e8;
+  --color-amber-200: #f6e7ce;
+  --color-amber-300: #f0d9b4;
+  --color-amber-400: #e8c795;
+  --color-amber-500: #ddb477;
+  --color-amber-600: #c99a5c;
+  --color-amber-700: #a87b48;
+  --color-amber-800: #84613a;
+  --color-amber-900: #63492d;
+  --color-amber-950: #402f1e;
+
+  /* (dulu rose / red / pink / fuchsia) -> Merah karang #F3725F */
+  --color-rose-50: #fef3f1;
+  --color-rose-100: #fde4df;
+  --color-rose-200: #fbc9bf;
+  --color-rose-300: #f8a99a;
+  --color-rose-400: #f58b76;
+  --color-rose-500: #f3725f;
+  --color-rose-600: #dc5f4c;
+  --color-rose-700: #b84d3e;
+  --color-rose-800: #943e32;
+  --color-rose-900: #6e2f27;
+  --color-rose-950: #481f1a;
+
+  --color-red-50: #fef3f1;
+  --color-red-100: #fde4df;
+  --color-red-200: #fbc9bf;
+  --color-red-300: #f8a99a;
+  --color-red-400: #f58b76;
+  --color-red-500: #f3725f;
+  --color-red-600: #dc5f4c;
+  --color-red-700: #b84d3e;
+  --color-red-800: #943e32;
+  --color-red-900: #6e2f27;
+
+  --color-pink-50: #fef3f1;
+  --color-pink-100: #fde4df;
+  --color-pink-200: #fbc9bf;
+  --color-pink-300: #f8a99a;
+  --color-pink-400: #f58b76;
+  --color-pink-500: #f3725f;
+  --color-pink-600: #dc5f4c;
+  --color-pink-700: #b84d3e;
+  --color-pink-800: #943e32;
+  --color-pink-900: #6e2f27;
+
+  --color-fuchsia-50: #fef3f1;
+  --color-fuchsia-100: #fde4df;
+  --color-fuchsia-200: #fbc9bf;
+  --color-fuchsia-300: #f8a99a;
+  --color-fuchsia-400: #f58b76;
+  --color-fuchsia-500: #f3725f;
+  --color-fuchsia-600: #dc5f4c;
+  --color-fuchsia-700: #b84d3e;
+  --color-fuchsia-800: #943e32;
+  --color-fuchsia-900: #6e2f27;
+
+  /* --- Tipografi --- */
+  font-family: var(--font-nb);
+  color: var(--color-nb-black);
+
+  /* --- Sudut membulat lembut (token radius Tailwind) --- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+}
+
+/* Semua elemen di dalam skin: garis mengikuti tema */
+.nb-skin *,
+.nb-skin *::before,
+.nb-skin *::after {
+  border-color: var(--nb-line);
+}
+
+/* =========================================================================
+   TEMA GELAP — ramp aksen dibalik.
+   Di tema terang, chip memakai latar aksen M UD A dengan teks aksen GELAP.
+   Di tema gelap urutannya dibalik: latar aksen menjadi gelap dan teks aksen
+   menjadi terang. Blok aksen solid (500/600) tetap memakai warna asalinya.
+   ========================================================================= */
+html[data-nb-theme='hitam'] .nb-skin,
+html[data-nb-theme='hitam'].nb-skin {
+  /* Ungu (asalnya indigo) */
+  --color-indigo-50: #2e2238;
+  --color-indigo-100: #3a2b47;
+  --color-indigo-200: #4c395d;
+  --color-indigo-600: #b69dce;
+  --color-indigo-700: #c9b6dc;
+  --color-indigo-800: #dccfe9;
+  --color-indigo-900: #ebe3f3;
+  --color-indigo-950: #f5f1f8;
+
+  /* Sage (asalnya emerald) */
+  --color-emerald-50: #1e2e24;
+  --color-emerald-100: #27412f;
+  --color-emerald-200: #34563f;
+  --color-emerald-600: #7fac90;
+  --color-emerald-700: #a3c7af;
+  --color-emerald-800: #c5ddcc;
+  --color-emerald-900: #e2eee5;
+  --color-emerald-950: #f1f6f2;
+
+  /* Plum (asalnya purple) */
+  --color-purple-50: #2e1b27;
+  --color-purple-100: #3c2434;
+  --color-purple-200: #523146;
+  --color-purple-600: #be8fac;
+  --color-purple-700: #d7b6cc;
+  --color-purple-800: #ebdae6;
+  --color-purple-900: #f6eff3;
+
+  /* Krem (asalnya amber) */
+  --color-amber-50: #332a1d;
+  --color-amber-100: #453725;
+  --color-amber-200: #5b4931;
+  --color-amber-700: #e8c795;
+  --color-amber-800: #f0d9b4;
+  --color-amber-900: #f6e7ce;
+  --color-amber-950: #fdfbf6;
+
+  /* Karang (asalnya rose / red / pink / fuchsia) */
+  --color-rose-50: #33211d;
+  --color-rose-100: #472c26;
+  --color-rose-200: #5f3a32;
+  --color-rose-600: #f58b76;
+  --color-rose-700: #f8a99a;
+  --color-rose-800: #fbc9bf;
+  --color-rose-900: #fde4df;
+  --color-rose-950: #fef3f1;
+  --color-red-50: #33211d;
+  --color-red-100: #472c26;
+  --color-red-200: #5f3a32;
+  --color-red-600: #f58b76;
+  --color-red-700: #f8a99a;
+  --color-red-800: #fbc9bf;
+  --color-red-900: #fde4df;
+  --color-pink-50: #33211d;
+  --color-pink-100: #472c26;
+  --color-pink-200: #5f3a32;
+  --color-pink-600: #f58b76;
+  --color-pink-700: #f8a99a;
+  --color-pink-800: #fbc9bf;
+  --color-pink-900: #fde4df;
+  --color-fuchsia-50: #33211d;
+  --color-fuchsia-100: #472c26;
+  --color-fuchsia-200: #5f3a32;
+  --color-fuchsia-600: #f58b76;
+  --color-fuchsia-700: #f8a99a;
+  --color-fuchsia-800: #fbc9bf;
+  --color-fuchsia-900: #fde4df;
+}
+
+/* Tanpa gradient */
+.nb-skin [class*="bg-gradient"] {
+  background-image: none;
+  background-color: var(--nb-raised);
+}
+/* Logo brand: blok ungu solid */
+.nb-skin [class*="from-indigo-700"],
+.nb-skin [class*="from-indigo-600"] {
+  background-color: var(--color-nb-teal);
+  color: var(--nb-on-accent);
+}
+
+/* Tanpa blur */
+.nb-skin [class*="backdrop-blur"] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* --- Border sangat tipis pada elemen yang sudah punya border --- */
+.nb-skin [class~="border"] {
+  border-width: 1px;
+}
+
+/* --- Shadow: netralkan shadow bawaan agar tampilan lebih bersih.
+   Shadow keras hanya dipakai pada tombol, kontrol mengambang, dan modal. --- */
+.nb-skin :where([class*="shadow"]) {
+  box-shadow: none;
+}
+
+/* --- Kontras teks pada blok aksen solid (WCAG) ---
+   Blok GELAP (ungu, plum, sage) memakai teks putih; blok TERANG (krem,
+   karang) memakai teks arang. Pencocokan token PERSIS (`~=`) dipakai supaya
+   varian hover/focus seperti `hover:bg-indigo-50` tidak ikut tertangkap. */
+.nb-skin [class~="bg-indigo-500"],
+.nb-skin [class~="bg-indigo-600"],
+.nb-skin [class~="bg-indigo-700"],
+.nb-skin [class~="bg-emerald-500"],
+.nb-skin [class~="bg-emerald-600"],
+.nb-skin [class~="bg-emerald-700"],
+.nb-skin [class~="bg-purple-600"],
+.nb-skin [class~="bg-purple-700"],
+.nb-skin [class~="bg-purple-800"],
+.nb-skin [class~="bg-nb-teal"] {
+  color: var(--nb-on-accent);
+}
+.nb-skin [class~="bg-amber-300"],
+.nb-skin [class~="bg-amber-400"],
+.nb-skin [class~="bg-amber-500"],
+.nb-skin [class~="bg-rose-500"],
+.nb-skin [class~="bg-rose-600"],
+.nb-skin [class~="bg-rose-700"],
+.nb-skin [class~="bg-fuchsia-500"],
+.nb-skin [class~="bg-fuchsia-600"],
+.nb-skin [class~="bg-red-500"],
+.nb-skin [class~="bg-red-600"],
+.nb-skin [class~="bg-pink-500"],
+.nb-skin [class~="bg-pink-600"],
+.nb-skin [class~="bg-nb-yellow"],
+.nb-skin [class~="bg-nb-magenta"] {
+  color: var(--nb-on-light-accent);
+}
+
+/* --- Tombol --- */
+.nb-skin button {
+  border: var(--nb-border);
+  box-shadow: var(--shadow-nb-ctrl);
+  font-weight: 700;
+  transition: transform 70ms ease, box-shadow 70ms ease, background-color 120ms ease,
+    color 120ms ease;
+}
+.nb-skin button:not(:disabled):hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 var(--nb-shadow);
+}
+.nb-skin button:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.nb-skin button:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* --- Input / textarea / select --- */
+.nb-skin input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.nb-skin textarea,
+.nb-skin select {
+  border: var(--nb-border);
+  background-color: var(--color-nb-white);
+  color: var(--color-nb-black);
+}
+.nb-skin input::placeholder,
+.nb-skin textarea::placeholder {
+  color: var(--color-slate-500);
+  opacity: 1;
+}
+
+/* --- Checkbox & radio: kotak ungu dengan centang putih --- */
+.nb-skin input[type="checkbox"],
+.nb-skin input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: var(--nb-border);
+  background-color: var(--color-nb-white);
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.nb-skin input[type="checkbox"]:checked,
+.nb-skin input[type="radio"]:checked {
+  background-color: var(--color-nb-teal);
+}
+.nb-skin input[type="checkbox"]:checked::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background-color: var(--nb-on-accent);
+}
+.nb-skin input[type="radio"]:checked::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background-color: var(--nb-on-accent);
+}
+
+/* --- Range slider --- */
+.nb-skin input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 26px;
+  cursor: pointer;
+}
+.nb-skin input[type="range"]::-webkit-slider-runnable-track {
+  height: 12px;
+  background-color: var(--color-nb-white);
+  border: 1px solid var(--nb-line);
+}
+.nb-skin input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  background-color: var(--color-nb-teal);
+  border: 1px solid var(--nb-line);
+  box-shadow: 2px 2px 0 0 var(--nb-shadow);
+}
+.nb-skin input[type="range"]::-moz-range-track {
+  height: 12px;
+  background-color: var(--color-nb-white);
+  border: 1px solid var(--nb-line);
+}
+.nb-skin input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background-color: var(--color-nb-teal);
+  border: 1px solid var(--nb-line);
+  border-radius: 0;
+  box-shadow: 2px 2px 0 0 var(--nb-shadow);
+}
+
+/* --- Focus state selalu terlihat (keyboard) --- */
+.nb-skin :focus-visible {
+  outline: 2px solid var(--color-nb-teal);
+  outline-offset: 2px;
+}
+
+/* --- Judul: tebal, huruf seperti slide (title case) --- */
+.nb-skin h1,
+.nb-skin h2,
+.nb-skin h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+/* =========================================================================
+   UTILITAS TAMPILAN (dipakai eksplisit oleh komponen chrome)
+   ========================================================================= */
+
+/* Header aplikasi — garis ungu di atas sebagai identitas slide */
+.nb-header {
+  border-bottom: var(--nb-border-strong) !important;
+  background-color: var(--color-nb-white);
+  box-shadow: inset 0 3px 0 0 var(--color-nb-teal);
+}
+
+/* Panel editor (sidebar) */
+.nb-panel {
+  border-right: var(--nb-border-strong) !important;
+  background-color: var(--color-nb-white);
+  box-shadow: none !important;
+}
+
+/* Modal */
+.nb-modal {
+  border: var(--nb-border-strong) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-nb-2) !important;
+  background-color: var(--color-nb-white);
+}
+
+/* Kartu */
+.nb-card {
+  background-color: var(--color-nb-white);
+  border: var(--nb-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-nb-1);
+}
+
+/* Tombol varian */
+.nb-btn-primary {
+  background-color: var(--color-nb-teal);
+  color: var(--nb-on-accent);
+}
+.nb-btn-danger {
+  background-color: var(--color-nb-magenta);
+  color: var(--nb-on-light-accent);
+}
+.nb-btn-warn {
+  background-color: var(--color-nb-yellow);
+  color: var(--nb-on-light-accent);
+}
+
+/* Badge */
+.nb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--nb-line);
+  border-radius: var(--nb-radius-sm);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.nb-badge--teal {
+  background-color: var(--color-nb-teal);
+  color: var(--nb-on-accent);
+}
+.nb-badge--magenta {
+  background-color: var(--color-nb-magenta);
+  color: var(--nb-on-light-accent);
+}
+.nb-badge--yellow {
+  background-color: var(--color-nb-yellow);
+  color: var(--nb-on-light-accent);
+}
+.nb-badge--ink {
+  background-color: var(--color-nb-black);
+  color: var(--color-nb-white);
+}
+
+/* Toast */
+.nb-toast {
+  border: var(--nb-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-nb-1);
+  font-weight: 700;
+}
+.nb-toast--success {
+  background-color: var(--color-nb-teal);
+  color: var(--nb-on-accent);
+}
+.nb-toast--error {
+  background-color: var(--color-nb-magenta);
+  color: var(--nb-on-light-accent);
+}
+
+/* Kontrol mengambang di atas kanvas */
+.nb-float {
+  background-color: var(--color-nb-white);
+  border: var(--nb-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-nb-1);
+}
+
+/* Tombol "telanjang" (tanpa border/shadow) — mis. tombol hapus di dalam chip */
+.nb-skin button.nb-bare {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  transform: none;
+  font-weight: inherit;
+}
+.nb-skin button.nb-bare:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* =========================================================================
+   ICON-ONLY — kurangi teks pada tombol.
+   Tombol yang punya ikon (svg) DAN tooltip (title/aria-label) diubah menjadi
+   ikon saja; label teksnya disembunyikan. Tombol tanpa tooltip dibiarkan
+   berteks agar tetap jelas. Tambahkan class `nb-icon-only` untuk memaksa,
+   atau `nb-keep-label` untuk mengecualikan.
+   ========================================================================= */
+.nb-skin button:has(svg):is([title], [aria-label]):not(.nb-keep-label),
+.nb-skin button.nb-icon-only {
+  font-size: 0;
+}
+.nb-skin button:has(svg):is([title], [aria-label]):not(.nb-keep-label) > span:not(:has(svg)),
+.nb-skin button.nb-icon-only > span:not(:has(svg)) {
+  display: none;
+}
+
+/* =========================================================================
+   PEMILIH TEMA TAMPILAN (3 swatch: putih / abu / hitam)
+   ========================================================================= */
+.nb-skin button.nb-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  line-height: 0;
+  cursor: pointer;
+}
+.nb-skin button.nb-swatch:hover {
+  transform: none;
+  box-shadow: none;
+  background-color: var(--nb-surface-3);
+}
+.nb-skin button.nb-swatch[aria-pressed='true'] {
+  border-color: var(--nb-line);
+  background-color: var(--nb-raised);
+}
+.nb-swatch-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--nb-line);
+}
+.nb-swatch-dot--putih {
+  background-color: var(--nb-swatch-putih);
+}
+.nb-swatch-dot--abu {
+  background-color: var(--nb-swatch-abu);
+}
+.nb-swatch-dot--hitam {
+  background-color: var(--nb-swatch-hitam);
+}
+
+/* =========================================================================
+   RAIL PANEL EDITOR (mode minimize / "ikon saja")
+   ========================================================================= */
+.nb-rail-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+/* Item aktif di rail: blok ungu + ikon putih (terlihat di semua tema) */
+.nb-rail-item--active {
+  background-color: var(--color-nb-teal) !important;
+  color: var(--nb-on-accent) !important;
+}
+.nb-rail-divider {
+  width: 32px;
+  border-top: 1px solid var(--nb-line-soft);
+  margin: 6px 0;
+  flex-shrink: 0;
+}
