@@ -1,0 +1,6 @@
+{
+  "name": "Bagan Maker",
+  "description": "Aplikasi pembuat bagan dan mind map horizontal dengan ekspor PNG transparan beresolusi tinggi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
